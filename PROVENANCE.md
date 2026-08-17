@@ -23,7 +23,7 @@ An exception must be approved explicitly and in writing by the project owner bef
 - files receiving the imported material;
 - scope and date of approval.
 
-Approved exceptions belong in `docs/THIRD_PARTY_APPROVALS.md`. Silence, a pull-request review, or general permission to contribute is not an exception.
+Approved exceptions belong in `THIRD_PARTY_APPROVALS.md`. Silence, a pull-request review, or general permission to contribute is not an exception.
 
 ## Contribution declaration
 

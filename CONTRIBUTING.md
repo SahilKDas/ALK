@@ -1,6 +1,6 @@
 # Contributing to ALK
 
-Before contributing, read [the provenance policy](docs/PROVENANCE.md). Imported or derived code is not allowed unless it is CC0, Unlicensed, or covered by a recorded exception approved explicitly by the project owner.
+Before contributing, read [the provenance policy](PROVENANCE.md). Imported or derived code is not allowed unless it is CC0, Unlicensed, or covered by a recorded exception approved explicitly by the project owner.
 
 Build and test every change:
 

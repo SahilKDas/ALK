@@ -15,7 +15,7 @@ The repository currently contains the **0.1 foundation interpreter**, not the pl
 - persistent runtime scope and line/column diagnostics
 - a public C++23 `alk::Runtime` / `alk::Value` host API
 
-Classes, methods, blocks, modules, imports, Fibers, bytecode, garbage collection, DOM bindings, WebAssembly, and JIT compilation are specified but not implemented yet. See [Language status](docs/LANGUAGE.md) and [Architecture](docs/ARCHITECTURE.md).
+Classes, methods, blocks, modules, imports, Fibers, bytecode, garbage collection, DOM bindings, WebAssembly, and JIT compilation are specified but not implemented yet. See [Language status](LANGUAGE.md) and [Architecture](ARCHITECTURE.md).
 
 ## Build
 
@@ -51,6 +51,6 @@ puts data.to_json()
 
 ## Project rules
 
-ALK is developed as an original implementation. Imported code is prohibited unless it is released under CC0 or the Unlicense, or the project owner gives explicit written permission for a specific exception. See [Provenance policy](docs/PROVENANCE.md) before contributing.
+ALK is developed as an original implementation. Imported code is prohibited unless it is released under CC0 or the Unlicense, or the project owner gives explicit written permission for a specific exception. See [Provenance policy](PROVENANCE.md) before contributing.
 
 ALK itself is licensed under [GPL-3.0](LICENSE).
