@@ -1,0 +1,11 @@
+# Every JSON value is also an ALK literal. ALK additionally spells null as nil.
+data = {
+  "user": {
+    "name": "Alex",
+    "roles": ["admin", "developer"],
+    "settings": {"dark_mode": true, "timeout": nil}
+  }
+}
+
+puts data["user"]["roles"][0]
+puts data.to_json()

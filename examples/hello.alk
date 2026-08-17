@@ -1,0 +1,6 @@
+# ALK 0.1 core-language example
+name = "web"
+features = ["dynamic values", "native JSON", "explicit scope"]
+
+puts "Hello, #{name}!"
+puts "ALK currently demonstrates #{features.length()} foundation features."
