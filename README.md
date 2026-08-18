@@ -62,4 +62,4 @@ ALK is not yet executable through `<script type="application/alk">` in existing 
 
 ALK is an original implementation. Imported code is prohibited unless released under CC0 or the Unlicense, or the project owner gives explicit written permission for a recorded exception. Read [PROVENANCE.md](PROVENANCE.md) before contributing.
 
-ALK itself is licensed under [GPL-3.0](LICENSE).
+The ALK compiler and runtime source code contained in this repository is licensed under [GPL-3.0](LICENSE). Merely writing or running a program in ALK does not place that program under GPL-3.0; ALK programs may be distributed under whatever license their authors choose. This distinction does not exempt code that copies, modifies, or incorporates GPL-licensed implementation code from the applicable GPL requirements.
