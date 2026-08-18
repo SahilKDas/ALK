@@ -1,4 +1,5 @@
 #include <alk/alk.hpp>
+#include "runtime_v2_internal.hpp"
 
 #include <charconv>
 #include <cmath>
@@ -1083,12 +1084,7 @@ bool operator==(const Value& lhs, const Value& rhs) {
 
 class Runtime::Impl {
 public:
-    Impl() {
-        Value::Map alk_namespace;
-        alk_namespace.emplace("__alk_namespace__", Value(true));
-        environment.emplace("ALK", Value(std::move(alk_namespace)));
-    }
-    Environment environment;
+    detail::AdvancedEngine engine;
 };
 
 Runtime::Runtime() : impl_(std::make_unique<Impl>()) {}
@@ -1097,13 +1093,7 @@ Runtime::Runtime(Runtime&&) noexcept = default;
 Runtime& Runtime::operator=(Runtime&&) noexcept = default;
 
 auto Runtime::execute_script(std::string_view source) -> std::expected<Value, ExecutionError> {
-    try {
-        return Engine(source, impl_->environment).run();
-    } catch (const Failure& failure) {
-        return std::unexpected(failure.error);
-    } catch (const std::exception& error) {
-        return std::unexpected(ExecutionError{error.what(), 1, 1});
-    }
+    return impl_->engine.execute(source);
 }
 
 auto parse_json(std::string_view source) -> std::expected<Value, ExecutionError> {
@@ -1116,6 +1106,6 @@ auto parse_json(std::string_view source) -> std::expected<Value, ExecutionError>
     }
 }
 
-std::string_view version() noexcept { return "0.1.0-dev"; }
+std::string_view version() noexcept { return "0.3.0-jit-dev"; }
 
 } // namespace alk

@@ -1,0 +1,29 @@
+# ALK 0.3: closures, objects, blocks, bytecode, and native JIT
+def mul_add(a, b, c)
+  return a * b + c
+end
+
+module Incrementable
+  def increment(self)
+    self.value = self.value + 1
+    return self.value
+  end
+end
+
+class Counter
+  include Incrementable
+
+  def initialize(self, start)
+    self.value = start
+  end
+end
+
+counter = Counter.new(4)
+values = [1, 2, 3, 4]
+squares = [value * value for value in values if value > 2]
+
+puts "native result: #{mul_add(6, 7, 1)}"
+puts "counter: #{counter.increment()}"
+puts "squares: #{squares.to_json()}"
+puts "range: #{(7..).take(3).to_json()}"
+puts ALK.jit_stats().to_json()

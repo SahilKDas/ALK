@@ -1,25 +1,30 @@
 # ALK
 
-ALK is a dynamically typed scripting language designed as a first-class web language. Its design combines Ruby 2.6-style blocks and mixins with explicit `self`, predictable scope, native JSON-compatible literals, and direct browser API bindings.
+ALK is a dynamically typed, JIT-compiled scripting language designed as a first-class web language. Its object model combines Ruby 2.6-style blocks and mixins with explicit `self`, predictable lexical scope, native JSON-compatible literals, and a planned direct browser API surface.
 
-The repository currently contains the **0.1 foundation interpreter**, not the planned JIT or browser integration. It is a small, dependency-free C++23 implementation used to lock down ALK's value model, syntax, diagnostics, embedding API, and JSON behavior before bytecode and JIT work begins.
+The current **0.3 development runtime** is a dependency-free C++23 implementation with a verified register VM, precise managed object heap, and guarded x86-64 baseline JIT. Browser hosting and the optimizing JIT are later milestones.
 
-## Implemented today
+## Implemented
 
-- `nil`, booleans, signed 64-bit integers, doubles, UTF-8 strings, arrays, and string-keyed maps
-- variables, comments, arithmetic, comparisons, `and` / `or` / `not`
-- array, map, and string indexing
-- double-quoted `#{...}` interpolation
-- `puts`, `append`, `length`, `size`, `strip`, `empty?`, and `to_json`
-- strict `ALK.parse_json(...)` and `alk::parse_json(...)`
-- persistent runtime scope and line/column diagnostics
-- a public C++23 `alk::Runtime` / `alk::Value` host API
+- dynamic scalars, strings, arrays, maps, objects, functions, blocks, modules, and ranges
+- functions, lexical closures, explicit `self`, return, exceptions, conditionals, and loops
+- classes, single inheritance, `super`, `include`, and `prepend`
+- property/index assignment and nil-safe `?.` navigation
+- `yield`, `each`, `map`, `select`, and `reduce`
+- endless ranges and filtered list comprehensions
+- strict JSON parsing and serialization
+- deterministic `std.json` and `std.math` imports
+- verified three-operand register bytecode and VM call frames
+- precise stop-the-world mark-sweep collection for managed objects
+- runtime x86-64 machine-code generation with W^X memory protection
+- checked JIT guards, overflow deoptimization, and portable VM fallback
+- public C++23 `alk::Runtime` / `alk::Value` host API
 
-Classes, methods, blocks, modules, imports, Fibers, bytecode, garbage collection, DOM bindings, WebAssembly, and JIT compilation are specified but not implemented yet. See [Language status](LANGUAGE.md) and [Architecture](ARCHITECTURE.md).
+See [Language reference](LANGUAGE.md), [Runtime architecture](ARCHITECTURE.md), and [Roadmap](ROADMAP.md).
 
-## Build
+## Build and test
 
-Requirements: CMake 3.25+ and a C++23 compiler. No package manager or third-party library is used.
+Requirements: CMake 3.25+ and a C++23 compiler. No package manager or third-party runtime/test library is used.
 
 ```sh
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -27,30 +32,34 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-Run a file or a short expression:
+Run a file or inline source:
 
 ```sh
-build/alk examples/hello.alk
+build/alk examples/v03.alk
 build/alk -e 'puts {"answer": 42}["answer"]'
 ```
 
-On a multi-config generator, the executable may be under `build/Release/`.
+On Windows the executable is `build/alk.exe`. Multi-config generators may place it under `build/Release/`.
 
-## Small example
+## JIT example
 
 ```alk
-name = "ALK"
-data = {
-  "language": name,
-  "features": ["native JSON", "interpolation"]
-}
+def mul_add(a, b, c)
+  return a * b + c
+end
 
-puts "Hello from #{data['language']}!"
-puts data.to_json()
+puts mul_add(6, 7, 1)
+puts ALK.jit_stats().to_json()
 ```
+
+Eligible integer bytecode is compiled to native x86-64 code on first invocation. Other types and complex chunks remain correct through verified bytecode. The current baseline JIT is intentionally narrow; SSA optimization and AArch64 emission are future work.
+
+## Browser status
+
+ALK is not yet executable through `<script type="application/alk">` in existing browsers. The 0.4 milestone adds the WebAssembly host, browser API bindings, and Fiber/event-loop integration. Native Blink/Gecko integration follows only after that host boundary is stable.
 
 ## Project rules
 
-ALK is developed as an original implementation. Imported code is prohibited unless it is released under CC0 or the Unlicense, or the project owner gives explicit written permission for a specific exception. See [Provenance policy](PROVENANCE.md) before contributing.
+ALK is an original implementation. Imported code is prohibited unless released under CC0 or the Unlicense, or the project owner gives explicit written permission for a recorded exception. Read [PROVENANCE.md](PROVENANCE.md) before contributing.
 
 ALK itself is licensed under [GPL-3.0](LICENSE).

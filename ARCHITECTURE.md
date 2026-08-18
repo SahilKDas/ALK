@@ -1,68 +1,87 @@
 # Runtime architecture
 
-## Current 0.1 foundation
-
-```text
-source -> lexer -> direct parser/evaluator -> alk::Value
-                                      |-> strict JSON reader/writer
-                                      |-> host-visible diagnostics
-```
-
-The current implementation is intentionally dependency-free and compact. It uses shared array/map storage to give collection values reference semantics while keeping scalar values cheap. Runtime scope persists across calls to `Runtime::execute_script`.
-
-This stage is a semantic prototype. It does not claim bytecode, GC, JIT, Fibers, WebAssembly, or DOM support.
-
-## Target pipeline
+## Current 0.3 pipeline
 
 ```text
 ALK source
-  -> C23-compatible lexer boundary
-  -> parser and semantic validation
-  -> three-operand register bytecode
-  -> portable Tier-0 interpreter
-  -> optional Tier-1 baseline JIT
-  -> optional Tier-2 SSA optimizing JIT
-  -> native browser host or WebAssembly host
+  -> lexer with source locations
+  -> parser and 0.2 syntax tree
+  -> function bytecode compiler
+  -> structural bytecode verifier
+  -> register VM call frame
+       |-> portable dynamic bytecode execution
+       |-> verified AST fallback opcode for complex constructs
+       `-> guarded x86-64 native specialization for eligible Int64 chunks
+  -> precise managed heap and public alk::Value result
 ```
 
-### Tier 0
+Top-level declarations and statements are evaluated from the parsed program. Every user-defined function owns a verified bytecode chunk and enters a VM call frame. Scalar expressions are lowered to normal register instructions. Functions containing constructs that are not individually lowered yet receive an explicit `execute_ast` instruction in their verified chunk rather than bypassing the VM.
 
-The portable baseline must use standard C++23 switch dispatch. Computed-goto dispatch may be an opt-in compiler-specific optimization; it cannot be the only implementation because computed goto is not part of C23 or C++23. Bytecode files will be versioned, little-endian, bounds-checked, and treated as untrusted input.
+## Register bytecode
 
-### Tier 1
+Instructions use explicit destination and source registers. The current instruction set includes:
 
-The baseline JIT will translate hot bytecode blocks directly to x86-64 or AArch64 machine code. Platform-specific executable-memory allocation, instruction-cache synchronization, W^X transitions, unwind metadata, and control-flow protections must sit behind a narrow interface.
+- constants, parameters, lexical loads, lexical stores, and moves;
+- arithmetic, unary operations, equality, and ordered comparisons;
+- unconditional and conditional jumps;
+- verified AST-fragment execution;
+- return.
 
-### Tier 2
+Before execution or native compilation, the verifier checks register indices, constant and name indices, parameter indices, jump destinations, AST-fragment indices, instruction count, register count, and the presence of a return path. Bytecode is treated as untrusted structural input even though the current compiler produces it in memory.
 
-The optimizing tier reconstructs typed SSA from bytecode and feedback. Initial passes are guarded inlining, constant folding, dead-code elimination, and escape analysis. Every speculative optimization must carry deoptimization metadata back to a valid interpreter frame.
+## Call frames and lexical scope
 
-### Memory management
+A function call creates:
 
-The target collector is precise and generational:
+- a lexical scope linked to the function's captured closure;
+- explicit parameter bindings, including explicit `self` for methods;
+- an optional captured block binding for `yield`;
+- a register file sized by the verified chunk;
+- an active root entry for managed-heap tracing.
 
-- copying nursery for young objects;
-- old-generation tracing with compaction where host constraints permit;
-- exact stack maps for JIT frames;
-- write barriers shared by interpreter and JIT;
-- host handles for DOM and other externally owned objects.
+Nested functions retain their defining scope. Assignments are local to the current function scope; reads walk outward through captured scopes. Method lookup searches prepended modules, the class, included modules, then the parent class. `super` binds the receiver to the corresponding parent implementation.
 
-Concurrent old-generation collection is a later optimization, not an MVP requirement. A stop-the-world collector should be made correct and measurable first.
+## Baseline JIT
 
-### Browser integration
+The baseline JIT consumes verified bytecode at runtime. It currently accepts straight-line chunks containing `Int64` parameters/constants, moves, addition, subtraction, multiplication, unary negation, and return.
 
-Two hosts are planned:
+On the first eligible call it emits x86-64 machine code into writable, non-executable memory. After emission the page is changed to read/execute, never read/write/execute, and the instruction cache is synchronized. The emitter supports the Windows x64 and System V x86-64 calling conventions.
 
-1. **WebAssembly fallback**: portable deployment in existing browsers, with browser APIs reached through a deliberately small host ABI.
-2. **Native engine integration**: direct Blink/Gecko host bindings and `application/alk` script handling, requiring changes in a browser engine.
+Native entry points accept a checked integer argument vector and an overflow-status address. Dynamic type mismatches skip native execution. Arithmetic overflow is reported by generated code and deoptimizes to the checked bytecode path, preserving language semantics. Unsupported chunks remain portable and correct through the VM.
 
-Direct DOM wrappers avoid ALK-level JSON serialization. A WebAssembly host may still cross a browser JavaScript ABI depending on platform support; documentation must not claim that bridge cost is absent in that configuration.
+Runtime counters are exposed through `ALK.jit_stats()` so tests can distinguish bytecode compilation, native compilation, native calls, guards/fallbacks, and collection activity.
+
+## Managed heap
+
+Class instances live in a project-owned heap and are referenced by stable object IDs rather than owning pointers. A precise stop-the-world mark-sweep collector traces:
+
+- global and active lexical scopes;
+- arrays and maps;
+- object fields;
+- closure and block scopes;
+- class and module method closures;
+- explicit temporary value roots.
+
+Because object-to-object fields contain non-owning IDs, unreachable cyclic object graphs can be reclaimed. Scalars, arrays, maps, functions, classes, and modules still use normal C++ value or shared ownership where cycles are not part of the managed object graph.
+
+## Deterministic modules
+
+`import module.path { Name }` resolves only against a runtime-owned module registry. It never searches the current directory or executes initialization files implicitly. The initial standard modules are:
+
+- `std.json`, exporting `parse_json`;
+- `std.math`, exporting `abs`.
+
+Browser modules will be introduced through a versioned host ABI rather than direct filesystem discovery.
 
 ## Lightweight constraints
 
-- no mandatory third-party libraries;
-- one core library plus one CLI;
-- features are compile-time selectable;
-- interpreter remains usable when all JITs and browser bindings are disabled;
-- binary size, startup time, peak memory, and allocation rate become release gates once bytecode exists;
-- correctness and security precede peak benchmark performance.
+- no mandatory third-party runtime or test libraries;
+- the portable VM works when native compilation is unavailable;
+- JIT support is isolated behind a narrow native-code interface;
+- complex features remain correct before being optimized;
+- binary size, startup time, peak memory, allocation rate, and native-code size are release gates for future tiers;
+- correctness, W^X discipline, verification, and deoptimization precede benchmark performance.
+
+## Next architecture steps
+
+0.4 adds the WebAssembly/browser host and Fiber scheduler. 0.5 reconstructs SSA HIR from bytecode for an optimizing tier, adds inline caches and guarded inlining, and introduces AArch64 emission. Neither is represented as implemented in the current runtime.
